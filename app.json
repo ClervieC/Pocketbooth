@@ -1,25 +1,49 @@
 {
   "expo": {
-    "name": "PocketboothTemp",
-    "slug": "PocketboothTemp",
+    "name": "PocketBooth",
+    "slug": "pocketbooth",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#FAF5EB"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "PocketBooth needs camera access to take photobooth pictures.",
+        "NSPhotoLibraryAddUsageDescription": "PocketBooth needs access to save your photo strip."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#FAF5EB",
+        "foregroundImage": "./assets/icon.png"
       },
-      "predictiveBackGestureEnabled": false
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "PocketBooth needs camera access to take photobooth pictures."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "PocketBooth needs access to save your photo strip.",
+          "savePhotosPermission": "PocketBooth needs permission to save your photo strip."
+        }
+      ]
+    ]
   }
 }
