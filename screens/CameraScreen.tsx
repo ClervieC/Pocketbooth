@@ -109,77 +109,75 @@ export default function CameraScreen({ onDone, onCancel }: Props) {
 
   return (
     <View style={styles.container}>
-      <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
+      <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} />
 
-        {/* Flash */}
-        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: '#fff', opacity: flashOpacity, zIndex: 20 }]} />
+      {/* Flash */}
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: '#fff', opacity: flashOpacity, zIndex: 20 }]} />
 
-        {/* Top bar: cancel on left, nothing on right — dots centered absolutely */}
-        <View style={styles.topBar}>
-          <TouchableOpacity
-            onPress={onCancel}
-            disabled={phase !== 'idle'}
-            style={[styles.cancelBtn, phase !== 'idle' && { opacity: 0.3 }]}
-          >
-            <Text style={styles.cancelText}>✕</Text>
-          </TouchableOpacity>
-        </View>
+      {/* Top bar: cancel on left */}
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          onPress={onCancel}
+          disabled={phase !== 'idle'}
+          style={[styles.cancelBtn, phase !== 'idle' && { opacity: 0.3 }]}
+        >
+          <Text style={styles.cancelText}>✕</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* Dots — centered absolutely at the top */}
-        <View style={styles.dotsRow} pointerEvents="none">
-          {Array.from({ length: TOTAL_PHOTOS }).map((_, i) => (
-            <View key={i} style={[styles.dot, i < photosTaken && styles.dotFilled]}>
-              {i < photosTaken
-                ? <Text style={styles.dotCheck}>✓</Text>
-                : <Text style={styles.dotNum}>{i + 1}</Text>
-              }
-            </View>
-          ))}
-        </View>
-
-        {/* Countdown overlay */}
-        {phase === 'countdown' && (
-          <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            <View style={styles.countdownWrap}>
-              <Text style={styles.smileText}>
-                {photosTaken === 0 ? 'Souriez ! 😄' : `Photo ${photosTaken + 1} sur ${TOTAL_PHOTOS}`}
-              </Text>
-              <Animated.Text
-                style={[styles.countdownText, { transform: [{ scale: countdownScale }] }]}
-              >
-                {countdown}
-              </Animated.Text>
-            </View>
+      {/* Dots — centered absolutely at the top */}
+      <View style={styles.dotsRow} pointerEvents="none">
+        {Array.from({ length: TOTAL_PHOTOS }).map((_, i) => (
+          <View key={i} style={[styles.dot, i < photosTaken && styles.dotFilled]}>
+            {i < photosTaken
+              ? <Text style={styles.dotCheck}>✓</Text>
+              : <Text style={styles.dotNum}>{i + 1}</Text>
+            }
           </View>
-        )}
+        ))}
+      </View>
 
-        {/* Between-shot message */}
-        {phase === 'between' && (
-          <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            <View style={styles.countdownWrap}>
-              <Text style={styles.betweenBadge}>{photosTaken} / {TOTAL_PHOTOS}</Text>
-              <Text style={styles.betweenMsg}>{BETWEEN_MESSAGES[photosTaken - 1]}</Text>
-            </View>
+      {/* Countdown overlay */}
+      {phase === 'countdown' && (
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <View style={styles.countdownWrap}>
+            <Text style={styles.smileText}>
+              {photosTaken === 0 ? 'Souriez ! 😄' : `Photo ${photosTaken + 1} sur ${TOTAL_PHOTOS}`}
+            </Text>
+            <Animated.Text
+              style={[styles.countdownText, { transform: [{ scale: countdownScale }] }]}
+            >
+              {countdown}
+            </Animated.Text>
           </View>
-        )}
-
-        {/* Bottom bar */}
-        <View style={styles.bottomBar}>
-          {phase === 'idle' ? (
-            <>
-              <Text style={styles.hint}>4 photos · 3 sec entre chaque</Text>
-              <TouchableOpacity style={styles.shootBtn} onPress={startSequence} activeOpacity={0.85}>
-                <View style={styles.shootRing}>
-                  <View style={styles.shootInner} />
-                </View>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <View style={styles.shootBtn} />
-          )}
         </View>
+      )}
 
-      </CameraView>
+      {/* Between-shot message */}
+      {phase === 'between' && (
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <View style={styles.countdownWrap}>
+            <Text style={styles.betweenBadge}>{photosTaken} / {TOTAL_PHOTOS}</Text>
+            <Text style={styles.betweenMsg}>{BETWEEN_MESSAGES[photosTaken - 1]}</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Bottom bar */}
+      <View style={styles.bottomBar}>
+        {phase === 'idle' ? (
+          <>
+            <Text style={styles.hint}>4 photos · 3 sec entre chaque</Text>
+            <TouchableOpacity style={styles.shootBtn} onPress={startSequence} activeOpacity={0.85}>
+              <View style={styles.shootRing}>
+                <View style={styles.shootInner} />
+              </View>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={styles.shootBtn} />
+        )}
+      </View>
     </View>
   );
 }
@@ -202,7 +200,6 @@ const styles = StyleSheet.create({
     padding: 32,
   },
 
-  camera: { flex: 1, justifyContent: 'space-between' },
 
   // Top bar
   topBar: {
@@ -314,6 +311,10 @@ const styles = StyleSheet.create({
 
   // Bottom bar
   bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingBottom: SAFE_BOTTOM,
     paddingTop: 16,
     alignItems: 'center',

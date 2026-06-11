@@ -172,7 +172,7 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
           disabled={saving}
         >
           <Text style={styles.saveBtnText}>
-            {saving ? "Sauvegarde…" : Platform.OS === "web" ? "Télécharger ↓" : "Sauvegarder 📥"}
+            {saving ? "Sauvegarde…" : Platform.OS === "web" ? "Télécharger ↓" : "Sauvegarder dans la galerie 📷"}
           </Text>
         </TouchableOpacity>
 
@@ -194,6 +194,17 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
 }
 
 function getImageFilterStyle(filter: FilterType) {
+  if (filter === "none") return {};
+
+  if (Platform.OS === "web") {
+    switch (filter) {
+      case "bw":      return { filter: "grayscale(1)" } as any;
+      case "sepia":   return { filter: "sepia(0.9)" } as any;
+      case "vintage": return { filter: "sepia(0.4) contrast(1.1) brightness(0.92) saturate(0.75)" } as any;
+      default:        return {};
+    }
+  }
+
   switch (filter) {
     case "bw":      return { filter: [{ grayscale: 1 }] } as any;
     case "sepia":   return { filter: [{ sepia: 0.9 }] } as any;

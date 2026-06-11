@@ -4,9 +4,11 @@
     "slug": "pocketbooth",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/Designer.png",
     "userInterfaceStyle": "light",
     "splash": {
+      "image": "./assets/Designer.png",
+      "resizeMode": "contain",
       "backgroundColor": "#FAF5EB"
     },
     "ios": {
@@ -19,7 +21,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FAF5EB",
-        "foregroundImage": "./assets/icon.png"
+        "foregroundImage": "./assets/Designer.png"
       },
       "permissions": [
         "android.permission.CAMERA",
@@ -28,7 +30,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/Designer.png"
     },
     "plugins": [
       [
