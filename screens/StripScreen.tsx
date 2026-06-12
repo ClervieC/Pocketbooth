@@ -87,7 +87,7 @@ interface Props {
 }
 
 const SAFE_TOP = Platform.OS === "ios" ? 60 : 40;
-const SAFE_BOTTOM = Platform.OS === "ios" ? 34 : 16;
+const SAFE_BOTTOM = Platform.OS === "ios" ? 34 : Platform.OS === "android" ? 16 : 0;
 
 function buildPathD(points: { x: number; y: number }[]): string {
   if (points.length < 2) return "";
@@ -187,6 +187,7 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
 
   const [mediaPermission, requestMediaPermission] = useSavePermission();
   const stripRef = useRef<any>(null);
+  const scrollRef = useRef<any>(null);
 
   useEffect(() => {
     if (Platform.OS === "android") {
@@ -199,6 +200,7 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
     const byHeight = (scrollAreaHeight - 32) / stripSize.height;
     const byWidth  = (width - 48) / stripSize.width;
     const target   = panelCollapsed ? Math.min(byHeight, byWidth, 2.5) : 1;
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
     Animated.spring(stripScaleAnim, {
       toValue: target,
       friction: 8,
@@ -352,11 +354,17 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
         </View>
 
         <ScrollView
+          ref={scrollRef}
           style={styles.scrollArea}
-          contentContainerStyle={styles.stripScroll}
+          contentContainerStyle={[
+            styles.stripScroll,
+            panelCollapsed && scrollAreaHeight > 0
+              ? { height: scrollAreaHeight }
+              : { flexGrow: 1 },
+          ]}
           showsVerticalScrollIndicator={false}
-          bounces
-          scrollEnabled={!isDrawMode}
+          bounces={!panelCollapsed}
+          scrollEnabled={!panelCollapsed && !isDrawMode && !isStickerMode}
           onLayout={(e) => setScrollAreaHeight(e.nativeEvent.layout.height)}
         >
           <Animated.View style={[styles.stripCard, { transform: [{ scale: stripScaleAnim }] }]}>
@@ -470,7 +478,7 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
       {/* ── Panneau de contrôles ── */}
       <View style={styles.panel}>
         {/* Collapse handle — always visible */}
-        <View {...panelPanResponder.panHandlers}>
+        <View style={styles.panelHandleArea} {...panelPanResponder.panHandlers}>
           <TouchableOpacity
             style={styles.panelHandle}
             activeOpacity={0.7}
@@ -795,6 +803,7 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: "#666",
+    ...Platform.select({ web: { overflow: "hidden" as any } }),
   },
 
   // ─── Strip zone ───
@@ -844,7 +853,6 @@ const styles = StyleSheet.create({
     }),
   },
   stripScroll: {
-    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 16,
@@ -1038,6 +1046,11 @@ const styles = StyleSheet.create({
   ghostBtnText: { fontSize: 12, fontWeight: "600", color: "#888" },
 
   // ─── Panel collapse handle ───
+  panelHandleArea: {
+    paddingVertical: 16,
+    paddingHorizontal: 60,
+    marginHorizontal: -60,
+  },
   panelHandle: {
     alignItems: "center",
     gap: 4,

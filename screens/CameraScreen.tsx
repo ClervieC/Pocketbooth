@@ -81,6 +81,7 @@ export default function CameraScreen({ onDone, onCancel }: Props) {
   const cameraRef = useRef<CameraView>(null);
   const flashOpacity = useRef(new Animated.Value(0)).current;
   const countdownScale = useRef(new Animated.Value(1)).current;
+  const betweenProgress = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (!permission?.granted) requestPermission();
@@ -134,6 +135,12 @@ export default function CameraScreen({ onDone, onCancel }: Props) {
       setPhotosTaken(i + 1);
 
       if (i < TOTAL_PHOTOS - 1) {
+        betweenProgress.setValue(1);
+        Animated.timing(betweenProgress, {
+          toValue: 0,
+          duration: BETWEEN_DELAY_MS,
+          useNativeDriver: false,
+        }).start();
         setPhase("between");
         await delay(BETWEEN_DELAY_MS);
       }
@@ -242,6 +249,19 @@ export default function CameraScreen({ onDone, onCancel }: Props) {
               <FlipCameraIcon size={18} />
               <Text style={styles.betweenFlipText}>Flip camera</Text>
             </TouchableOpacity>
+            <View style={styles.timerTrack}>
+              <Animated.View
+                style={[
+                  styles.timerFill,
+                  {
+                    width: betweenProgress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ["0%", "100%"],
+                    }),
+                  },
+                ]}
+              />
+            </View>
           </View>
         </View>
       )}
@@ -422,6 +442,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     letterSpacing: 0.3,
+  },
+  timerTrack: {
+    width: 140,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    overflow: "hidden",
+    marginTop: 10,
+  },
+  timerFill: {
+    height: "100%",
+    borderRadius: 2,
+    backgroundColor: "#fff",
   },
 
   // Bottom bar
