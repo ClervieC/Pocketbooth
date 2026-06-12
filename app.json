@@ -45,7 +45,8 @@
           "photosPermission": "PocketBooth needs access to save your photo strip.",
           "savePhotosPermission": "PocketBooth needs permission to save your photo strip."
         }
-      ]
+      ],
+      "expo-sharing"
     ]
   }
 }

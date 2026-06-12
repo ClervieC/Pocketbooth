@@ -17,9 +17,9 @@ interface Props {
 // 4 polaroid frames: each has a rotation, slight offset, and a tint color
 const FRAMES = [
   { rotate: "-12deg", tx: -60, ty: 10, bg: "#F5C842" },
-  { rotate: "-4deg",  tx: -20, ty: -12, bg: "#fce4ec" },
-  { rotate:  "5deg",  tx:  22, ty:  6, bg: "#e8f5e9" },
-  { rotate: "14deg",  tx:  62, ty: 16, bg: "#fce4ec" },
+  { rotate: "-4deg", tx: -20, ty: -12, bg: "#fce4ec" },
+  { rotate: "5deg", tx: 22, ty: 6, bg: "#e8f5e9" },
+  { rotate: "14deg", tx: 62, ty: 16, bg: "#fce4ec" },
 ];
 
 export default function HomeScreen({ onStart }: Props) {
@@ -59,12 +59,14 @@ export default function HomeScreen({ onStart }: Props) {
       </View>
 
       {/* Tagline */}
-      <Text style={styles.tagline}>
-        4 shots. 1 strip.{"\n"}pure fun.
-      </Text>
+      <Text style={styles.tagline}>4 shots. 1 strip.{"\n"}pure fun.</Text>
 
       {/* CTA */}
-      <TouchableOpacity style={styles.button} onPress={onStart} activeOpacity={0.85}>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={onStart}
+        activeOpacity={0.85}
+      >
         <Text style={styles.buttonText}>Start →</Text>
       </TouchableOpacity>
 
@@ -145,6 +147,7 @@ const styles = StyleSheet.create({
   logo: {
     width: Math.min(width * 0.55, 220),
     height: Math.min(width * 0.55, 220),
+    borderRadius: "20px",
   },
 
   // Text
