@@ -143,6 +143,158 @@ function buildPathD(points: { x: number; y: number }[]): string {
     .join(" ");
 }
 
+// ── Web-only: custom canvas capture (html2canvas ne supporte pas CSS filter) ──
+
+function loadImgForCapture(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = document.createElement("img") as HTMLImageElement;
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function applyPixelFilter(
+  ctx: CanvasRenderingContext2D,
+  filter: FilterType,
+  x: number, y: number, w: number, h: number,
+) {
+  if (filter === "none") return;
+  let id: ImageData;
+  try {
+    id = ctx.getImageData(x, y, w, h);
+  } catch {
+    return; // canvas tainted — skip filter
+  }
+  const d = id.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    if (filter === "bw") {
+      const gr = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+      d[i] = d[i + 1] = d[i + 2] = gr;
+    } else if (filter === "sepia") {
+      d[i]     = Math.min(255, Math.round(r * 0.393 + g * 0.769 + b * 0.189));
+      d[i + 1] = Math.min(255, Math.round(r * 0.349 + g * 0.686 + b * 0.168));
+      d[i + 2] = Math.min(255, Math.round(r * 0.272 + g * 0.534 + b * 0.131));
+    } else if (filter === "vintage") {
+      const sr = Math.min(255, r * 0.393 + g * 0.769 + b * 0.189);
+      const sg = Math.min(255, r * 0.349 + g * 0.686 + b * 0.168);
+      const sb = Math.min(255, r * 0.272 + g * 0.534 + b * 0.131);
+      let vr = r * 0.6 + sr * 0.4;
+      let vg = g * 0.6 + sg * 0.4;
+      let vb = b * 0.6 + sb * 0.4;
+      vr *= 0.92; vg *= 0.92; vb *= 0.92; // brightness 0.92
+      vr = (vr / 255 - 0.5) * 1.1 * 255 + 127.5; // contrast 1.1
+      vg = (vg / 255 - 0.5) * 1.1 * 255 + 127.5;
+      vb = (vb / 255 - 0.5) * 1.1 * 255 + 127.5;
+      const lum = 0.299 * vr + 0.587 * vg + 0.114 * vb; // saturate 0.75
+      d[i]     = Math.max(0, Math.min(255, Math.round(lum + (vr - lum) * 0.75)));
+      d[i + 1] = Math.max(0, Math.min(255, Math.round(lum + (vg - lum) * 0.75)));
+      d[i + 2] = Math.max(0, Math.min(255, Math.round(lum + (vb - lum) * 0.75)));
+    }
+  }
+  ctx.putImageData(id, x, y);
+}
+
+async function captureStripOnCanvas(args: {
+  photos: string[];
+  filter: FilterType;
+  bgColor: string;
+  stripWidth: number;
+  stripHeight: number;
+  photoWidth: number;
+  photoHeight: number;
+  layers: Layer[];
+  showDate: boolean;
+}): Promise<string> {
+  const { photos, filter, bgColor, stripWidth, stripHeight, photoWidth, photoHeight, layers, showDate } = args;
+  const dpr = Math.max(window.devicePixelRatio || 2, 2);
+
+  const canvas = document.createElement("canvas");
+  canvas.width  = Math.round(stripWidth  * dpr);
+  canvas.height = Math.round(stripHeight * dpr);
+  const ctx = canvas.getContext("2d")!;
+  ctx.scale(dpr, dpr);
+
+  // Background
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, stripWidth, stripHeight);
+
+  // Photos with cover crop + pixel filter
+  const PAD_V = 12, PAD_H = 8, GAP = 6;
+  for (let i = 0; i < photos.length; i++) {
+    const px = PAD_H;
+    const py = PAD_V + i * (photoHeight + GAP);
+    try {
+      const img = await loadImgForCapture(photos[i]);
+      // Draw to a temp canvas at logical pixel size, apply filter there
+      const tmp = document.createElement("canvas");
+      tmp.width  = photoWidth;
+      tmp.height = photoHeight;
+      const tc = tmp.getContext("2d")!;
+      const sc = Math.max(photoWidth / img.width, photoHeight / img.height);
+      const dw = img.width * sc;
+      const dh = img.height * sc;
+      tc.drawImage(img, (photoWidth - dw) / 2, (photoHeight - dh) / 2, dw, dh);
+      applyPixelFilter(tc, filter, 0, 0, photoWidth, photoHeight);
+      ctx.drawImage(tmp, px, py, photoWidth, photoHeight);
+    } catch {
+      ctx.fillStyle = "#ddd";
+      ctx.fillRect(px, py, photoWidth, photoHeight);
+    }
+  }
+
+  // Drawing paths
+  ctx.save();
+  ctx.lineCap  = "round";
+  ctx.lineJoin = "round";
+  for (const layer of layers) {
+    if (layer.type !== "path") continue;
+    const { points, color, strokeWidth } = layer.data;
+    if (points.length < 2) continue;
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = strokeWidth;
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let j = 1; j < points.length; j++) ctx.lineTo(points[j].x, points[j].y);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Emoji stickers
+  ctx.save();
+  ctx.font         = "32px sans-serif";
+  ctx.textBaseline = "top";
+  for (const layer of layers) {
+    if (layer.type !== "sticker") continue;
+    const x = (layer.data.pos.x as any)._value as number;
+    const y = (layer.data.pos.y as any)._value as number;
+    ctx.fillText(layer.data.emoji, x, y);
+  }
+  ctx.restore();
+
+  // Date line
+  if (showDate) {
+    const dateStr = new Date().toLocaleDateString("en-US", {
+      day: "numeric", month: "short", year: "numeric",
+    });
+    const lineY = stripHeight - PAD_V - 11;
+    ctx.save();
+    ctx.textBaseline = "top";
+    ctx.font      = "9px sans-serif";
+    ctx.fillStyle = bgColor === "#1a1a1a" ? "#888" : "#aaa";
+    ctx.fillText(dateStr, PAD_H + 2, lineY);
+    ctx.font      = "bold 9px sans-serif";
+    ctx.fillStyle = "#E8325C";
+    const brandW = ctx.measureText("PocketBooth").width;
+    ctx.fillText("PocketBooth", stripWidth - PAD_H - brandW - 2, lineY);
+    ctx.restore();
+  }
+
+  return canvas.toDataURL("image/png", 1.0);
+}
+
 function StickerView({
   sticker,
   showRemove,
@@ -392,7 +544,19 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
     if (saving) return;
     setSaving(true);
     try {
-      const uri: string = await stripRef.current.capture();
+      const uri: string = Platform.OS === "web"
+        ? await captureStripOnCanvas({
+            photos,
+            filter,
+            bgColor: STRIP_BG_COLORS[bgIndex],
+            stripWidth:  stripSize.width,
+            stripHeight: stripSize.height,
+            photoWidth:  PHOTO_WIDTH,
+            photoHeight: PHOTO_HEIGHT,
+            layers,
+            showDate,
+          })
+        : await stripRef.current.capture();
       await saveStripToGallery(
         uri,
         requestMediaPermission as any,

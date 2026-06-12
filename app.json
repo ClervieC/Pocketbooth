@@ -13,12 +13,16 @@
     },
     "ios": {
       "supportsTablet": false,
+      "bundleIdentifier": "com.yourname.pocketbooth",
+      "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "PocketBooth needs camera access to take photobooth pictures.",
         "NSPhotoLibraryAddUsageDescription": "PocketBooth needs access to save your photo strip."
       }
     },
     "android": {
+      "package": "com.yourname.pocketbooth",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#FAF5EB",
         "foregroundImage": "./assets/Designer.png"
