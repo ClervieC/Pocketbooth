@@ -15,9 +15,11 @@ import Svg, { Path as SvgPath } from "react-native-svg";
 
 const { width, height } = Dimensions.get("window");
 
-// Matches PHOTO_HEIGHT / PHOTO_WIDTH ratio used in the strip
-const CROP_ASPECT = 0.75;
-const CROP_H = Math.round(width * CROP_ASPECT);
+// Mirror exact dimensions from StripScreen so the guide matches perfectly
+const _STRIP_W = Math.min(width * 0.48, 200);
+const _PHOTO_W = _STRIP_W - 16;
+const _PHOTO_H = Math.round(_PHOTO_W * 0.75);
+const CROP_H = Math.round(width * _PHOTO_H / _PHOTO_W);
 const CROP_TOP = Math.round((height - CROP_H) / 2);
 
 const COUNTDOWN_SECONDS = 3;
