@@ -6,7 +6,6 @@ import {
   Image,
   LayoutAnimation,
   PanResponder,
-  PixelRatio,
   Platform,
   ScrollView,
   StyleSheet,
@@ -310,21 +309,13 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
       onPanResponderGrant: (e) => {
         const { locationX, locationY } = e.nativeEvent;
         const s = stripScaleRef.current;
-        const w = stripDrawWidthRef.current;
-        const h = stripDrawHeightRef.current;
-        const x = (locationX - w / 2) / s + w / 2;
-        const y = (locationY - h / 2) / s + h / 2;
-        currentPathRef.current = [{ x, y }];
-        setCurrentPath([{ x, y }]);
+        currentPathRef.current = [{ x: locationX / s, y: locationY / s }];
+        setCurrentPath([{ x: locationX / s, y: locationY / s }]);
       },
       onPanResponderMove: (e) => {
         const { locationX, locationY } = e.nativeEvent;
         const s = stripScaleRef.current;
-        const w = stripDrawWidthRef.current;
-        const h = stripDrawHeightRef.current;
-        const x = (locationX - w / 2) / s + w / 2;
-        const y = (locationY - h / 2) / s + h / 2;
-        currentPathRef.current = [...currentPathRef.current, { x, y }];
+        currentPathRef.current = [...currentPathRef.current, { x: locationX / s, y: locationY / s }];
         setCurrentPath([...currentPathRef.current]);
       },
       onPanResponderRelease: () => {
@@ -375,9 +366,7 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
     if (saving) return;
     setSaving(true);
     try {
-      const uri: string = await stripRef.current.capture({
-        pixelRatio: PixelRatio.get(),
-      });
+      const uri: string = await stripRef.current.capture();
       if (Platform.OS === "web") {
         const a = document.createElement("a");
         a.href = uri;
@@ -403,9 +392,7 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
     if (saving) return;
     setSaving(true);
     try {
-      const uri: string = await stripRef.current.capture({
-        pixelRatio: PixelRatio.get(),
-      });
+      const uri: string = await stripRef.current.capture();
       await saveStripToGallery(
         uri,
         requestMediaPermission as any,
