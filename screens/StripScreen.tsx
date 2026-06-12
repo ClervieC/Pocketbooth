@@ -228,16 +228,18 @@ async function captureStripOnCanvas(args: {
     const py = PAD_V + i * (photoHeight + GAP);
     try {
       const img = await loadImgForCapture(photos[i]);
-      // Draw to a temp canvas at logical pixel size, apply filter there
+      // Temp canvas at PHYSICAL pixel size so no upscaling occurs when drawn onto main canvas
+      const tmpW = Math.round(photoWidth  * dpr);
+      const tmpH = Math.round(photoHeight * dpr);
       const tmp = document.createElement("canvas");
-      tmp.width  = photoWidth;
-      tmp.height = photoHeight;
+      tmp.width  = tmpW;
+      tmp.height = tmpH;
       const tc = tmp.getContext("2d")!;
-      const sc = Math.max(photoWidth / img.width, photoHeight / img.height);
+      const sc = Math.max(tmpW / img.width, tmpH / img.height);
       const dw = img.width * sc;
       const dh = img.height * sc;
-      tc.drawImage(img, (photoWidth - dw) / 2, (photoHeight - dh) / 2, dw, dh);
-      applyPixelFilter(tc, filter, 0, 0, photoWidth, photoHeight);
+      tc.drawImage(img, (tmpW - dw) / 2, (tmpH - dh) / 2, dw, dh);
+      applyPixelFilter(tc, filter, 0, 0, tmpW, tmpH);
       ctx.drawImage(tmp, px, py, photoWidth, photoHeight);
     } catch {
       ctx.fillStyle = "#ddd";
@@ -562,7 +564,9 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
         requestMediaPermission as any,
         mediaPermission as any,
       );
-      if (Platform.OS !== "web") {
+      if (Platform.OS === "web") {
+        Alert.alert("Done!", "Use the share sheet to save the image to your Photos 📸");
+      } else {
         Alert.alert("Saved!", "Your strip has been saved to your gallery 📸");
       }
     } catch (e: any) {
