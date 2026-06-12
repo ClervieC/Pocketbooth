@@ -13,7 +13,12 @@ import {
 } from "react-native";
 import Svg, { Path as SvgPath } from "react-native-svg";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
+
+// Matches PHOTO_HEIGHT / PHOTO_WIDTH ratio used in the strip
+const CROP_ASPECT = 0.75;
+const CROP_H = Math.round(width * CROP_ASPECT);
+const CROP_TOP = Math.round((height - CROP_H) / 2);
 
 const COUNTDOWN_SECONDS = 3;
 const BETWEEN_DELAY_MS = 3000;
@@ -188,6 +193,13 @@ export default function CameraScreen({ onDone, onCancel, totalPhotos }: Props) {
           { backgroundColor: "#fff", opacity: flashOpacity, zIndex: 20 },
         ]}
       />
+
+      {/* Crop guide — dims zones outside the strip photo ratio */}
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <View style={styles.cropDimTop} />
+        <View style={styles.cropFrame} />
+        <View style={styles.cropDimBottom} />
+      </View>
 
       {/* Top bar: cancel on left */}
       <View style={styles.topBar}>
@@ -528,6 +540,34 @@ const styles = StyleSheet.create({
     height: 66,
     borderRadius: 33,
     backgroundColor: "#E8325C",
+  },
+
+  // Crop guide
+  cropDimTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: CROP_TOP,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  cropFrame: {
+    position: "absolute",
+    top: CROP_TOP,
+    left: 0,
+    right: 0,
+    height: CROP_H,
+    borderTopWidth: 1.5,
+    borderBottomWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.5)",
+  },
+  cropDimBottom: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: CROP_TOP,
+    backgroundColor: "rgba(0,0,0,0.55)",
   },
 
   // Permission screen
