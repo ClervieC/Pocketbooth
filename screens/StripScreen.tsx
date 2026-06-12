@@ -6,6 +6,7 @@ import {
   Image,
   LayoutAnimation,
   PanResponder,
+  PixelRatio,
   Platform,
   ScrollView,
   StyleSheet,
@@ -40,17 +41,63 @@ const FILTERS: { id: FilterType; label: string; color: string }[] = [
 
 const STICKER_EMOJIS = [
   // Hearts & love
-  "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "💕", "🫶",
+  "❤️",
+  "🧡",
+  "💛",
+  "💚",
+  "💙",
+  "💜",
+  "🖤",
+  "🤍",
+  "💕",
+  "🫶",
   // Faces
-  "😍", "🥰", "😘", "🤩", "😎", "😜", "🥳", "😇", "🤪", "🫠",
+  "😍",
+  "🥰",
+  "😘",
+  "🤩",
+  "😎",
+  "😜",
+  "🥳",
+  "😇",
+  "🤪",
+  "🫠",
   // Sparkles & sky
-  "✨", "⭐", "🌟", "💫", "🌈", "🌙", "☀️", "⚡", "🌠",
+  "✨",
+  "⭐",
+  "🌟",
+  "💫",
+  "🌈",
+  "🌙",
+  "☀️",
+  "⚡",
+  "🌠",
   // Party
-  "🎉", "🎊", "🎈", "🥂", "🎁", "🎀",
+  "🎉",
+  "🎊",
+  "🎈",
+  "🥂",
+  "🎁",
+  "🎀",
   // Nature & flowers
-  "🌸", "🌺", "🌻", "🌷", "🌹", "🍀", "🦋", "🐝",
+  "🌸",
+  "🌺",
+  "🌻",
+  "🌷",
+  "🌹",
+  "🍀",
+  "🦋",
+  "🐝",
   // Fun & glam
-  "🔥", "💎", "👑", "💅", "🕶️", "💯", "🫧", "🌊", "🦄",
+  "🔥",
+  "💎",
+  "👑",
+  "💅",
+  "🕶️",
+  "💯",
+  "🫧",
+  "🌊",
+  "🦄",
 ];
 const DRAW_COLORS = [
   "#E8325C",
@@ -87,7 +134,8 @@ interface Props {
 }
 
 const SAFE_TOP = Platform.OS === "ios" ? 60 : 40;
-const SAFE_BOTTOM = Platform.OS === "ios" ? 34 : Platform.OS === "android" ? 16 : 0;
+const SAFE_BOTTOM =
+  Platform.OS === "ios" ? 34 : Platform.OS === "android" ? 16 : 0;
 
 function buildPathD(points: { x: number; y: number }[]): string {
   if (points.length < 2) return "";
@@ -102,12 +150,14 @@ function StickerView({
   onRemove,
   stripWidth,
   stripHeight,
+  scaleRef,
 }: {
   sticker: StickerItem;
   showRemove: boolean;
   onRemove: () => void;
   stripWidth: number;
   stripHeight: number;
+  scaleRef: { current: number };
 }) {
   const showRemoveRef = useRef(showRemove);
   showRemoveRef.current = showRemove;
@@ -127,17 +177,23 @@ function StickerView({
         });
         sticker.pos.setValue({ x: 0, y: 0 });
       },
-      onPanResponderMove: Animated.event(
-        [null, { dx: sticker.pos.x, dy: sticker.pos.y }],
-        { useNativeDriver: false },
-      ),
+      onPanResponderMove: (_, g) => {
+        const s = scaleRef.current;
+        sticker.pos.setValue({ x: g.dx / s, y: g.dy / s });
+      },
       onPanResponderRelease: () => {
         sticker.pos.flattenOffset();
         const EMOJI_SIZE = 36;
         const rawX = (sticker.pos.x as any)._value;
         const rawY = (sticker.pos.y as any)._value;
-        const clampedX = Math.max(0, Math.min(rawX, stripWidthRef.current - EMOJI_SIZE));
-        const clampedY = Math.max(0, Math.min(rawY, stripHeightRef.current - EMOJI_SIZE));
+        const clampedX = Math.max(
+          0,
+          Math.min(rawX, stripWidthRef.current - EMOJI_SIZE),
+        );
+        const clampedY = Math.max(
+          0,
+          Math.min(rawY, stripHeightRef.current - EMOJI_SIZE),
+        );
         if (rawX !== clampedX || rawY !== clampedY) {
           sticker.pos.setValue({ x: clampedX, y: clampedY });
         }
@@ -181,6 +237,8 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
   const [drawThick, setDrawThick] = useState(false);
   const [stripSize, setStripSize] = useState({ width: STRIP_WIDTH, height: 0 });
 
+  const [showDate, setShowDate] = useState(true);
+
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [scrollAreaHeight, setScrollAreaHeight] = useState(0);
   const stripScaleAnim = useRef(new Animated.Value(1)).current;
@@ -198,8 +256,8 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
   useEffect(() => {
     if (stripSize.height === 0 || scrollAreaHeight === 0) return;
     const byHeight = (scrollAreaHeight - 32) / stripSize.height;
-    const byWidth  = (width - 48) / stripSize.width;
-    const target   = panelCollapsed ? Math.min(byHeight, byWidth, 2.5) : 1;
+    const byWidth = (width - 48) / stripSize.width;
+    const target = panelCollapsed ? Math.min(byHeight, byWidth, 2.5) : 1;
     scrollRef.current?.scrollTo({ y: 0, animated: false });
     Animated.spring(stripScaleAnim, {
       toValue: target,
@@ -224,10 +282,23 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
   ).current;
 
   // Refs to avoid stale closures inside the PanResponder created once via useRef
+  const stripScaleRef = useRef(1);
+  const stripDrawWidthRef = useRef(STRIP_WIDTH);
+  const stripDrawHeightRef = useRef(0);
   const panelTabRef = useRef<PanelTab>("filter");
   const drawColorRef = useRef(drawColor);
   const drawThickRef = useRef(false);
   const currentPathRef = useRef<{ x: number; y: number }[]>([]);
+  stripScaleRef.current =
+    panelCollapsed && stripSize.height > 0 && scrollAreaHeight > 0
+      ? Math.min(
+          (scrollAreaHeight - 32) / stripSize.height,
+          (width - 48) / stripSize.width,
+          2.5,
+        )
+      : 1;
+  stripDrawWidthRef.current = stripSize.width;
+  stripDrawHeightRef.current = stripSize.height;
   panelTabRef.current = panelTab;
   drawColorRef.current = drawColor;
   drawThickRef.current = drawThick;
@@ -238,15 +309,22 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
       onMoveShouldSetPanResponder: () => panelTabRef.current === "draw",
       onPanResponderGrant: (e) => {
         const { locationX, locationY } = e.nativeEvent;
-        currentPathRef.current = [{ x: locationX, y: locationY }];
-        setCurrentPath([{ x: locationX, y: locationY }]);
+        const s = stripScaleRef.current;
+        const w = stripDrawWidthRef.current;
+        const h = stripDrawHeightRef.current;
+        const x = (locationX - w / 2) / s + w / 2;
+        const y = (locationY - h / 2) / s + h / 2;
+        currentPathRef.current = [{ x, y }];
+        setCurrentPath([{ x, y }]);
       },
       onPanResponderMove: (e) => {
         const { locationX, locationY } = e.nativeEvent;
-        currentPathRef.current = [
-          ...currentPathRef.current,
-          { x: locationX, y: locationY },
-        ];
+        const s = stripScaleRef.current;
+        const w = stripDrawWidthRef.current;
+        const h = stripDrawHeightRef.current;
+        const x = (locationX - w / 2) / s + w / 2;
+        const y = (locationY - h / 2) / s + h / 2;
+        currentPathRef.current = [...currentPathRef.current, { x, y }];
         setCurrentPath([...currentPathRef.current]);
       },
       onPanResponderRelease: () => {
@@ -260,7 +338,15 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
         if (pts.length > 1) {
           setLayers((prev) => [
             ...prev,
-            { type: "path", data: { id: String(Date.now() + Math.random()), points: pts, color: col, strokeWidth: sw } },
+            {
+              type: "path",
+              data: {
+                id: String(Date.now() + Math.random()),
+                points: pts,
+                color: col,
+                strokeWidth: sw,
+              },
+            },
           ]);
         }
       },
@@ -289,7 +375,9 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
     if (saving) return;
     setSaving(true);
     try {
-      const uri: string = await stripRef.current.capture();
+      const uri: string = await stripRef.current.capture({
+        pixelRatio: PixelRatio.get(),
+      });
       if (Platform.OS === "web") {
         const a = document.createElement("a");
         a.href = uri;
@@ -315,7 +403,9 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
     if (saving) return;
     setSaving(true);
     try {
-      const uri: string = await stripRef.current.capture();
+      const uri: string = await stripRef.current.capture({
+        pixelRatio: PixelRatio.get(),
+      });
       await saveStripToGallery(
         uri,
         requestMediaPermission as any,
@@ -367,7 +457,12 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
           scrollEnabled={!panelCollapsed && !isDrawMode && !isStickerMode}
           onLayout={(e) => setScrollAreaHeight(e.nativeEvent.layout.height)}
         >
-          <Animated.View style={[styles.stripCard, { transform: [{ scale: stripScaleAnim }] }]}>
+          <Animated.View
+            style={[
+              styles.stripCard,
+              { transform: [{ scale: stripScaleAnim }] },
+            ]}
+          >
             <ViewShot
               ref={stripRef}
               options={{ format: "png", quality: 1.0 }}
@@ -395,19 +490,21 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
                   </View>
                 ))}
 
-                <View style={styles.dateLine}>
-                  <Text
-                    style={[
-                      styles.dateText,
-                      { color: bgIndex === 1 ? "#888" : "#aaa" },
-                    ]}
-                  >
-                    {formatDate(new Date())}
-                  </Text>
-                  <Text style={styles.brandText}>PocketBooth</Text>
-                </View>
+                {showDate && (
+                  <View style={styles.dateLine}>
+                    <Text
+                      style={[
+                        styles.dateText,
+                        { color: bgIndex === 1 ? "#888" : "#aaa" },
+                      ]}
+                    >
+                      {formatDate(new Date())}
+                    </Text>
+                    <Text style={styles.brandText}>PocketBooth</Text>
+                  </View>
+                )}
 
-                {/* Interleaved stickers + paths in creation order */}
+                {/* Interleaved stickers, text and paths in creation order */}
                 {layers.map((layer) => {
                   if (layer.type === "sticker") {
                     return (
@@ -418,18 +515,27 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
                         onRemove={() =>
                           setLayers((prev) =>
                             prev.filter(
-                              (l) => !(l.type === "sticker" && l.data.id === layer.data.id),
-                            )
+                              (l) =>
+                                !(
+                                  l.type === "sticker" &&
+                                  l.data.id === layer.data.id
+                                ),
+                            ),
                           )
                         }
                         stripWidth={stripSize.width}
                         stripHeight={stripSize.height}
+                        scaleRef={stripScaleRef}
                       />
                     );
                   }
                   if (stripSize.height === 0) return null;
                   return (
-                    <View key={`p-${layer.data.id}`} style={StyleSheet.absoluteFill} pointerEvents="none">
+                    <View
+                      key={`p-${layer.data.id}`}
+                      style={StyleSheet.absoluteFill}
+                      pointerEvents="none"
+                    >
                       <Svg width={stripSize.width} height={stripSize.height}>
                         <SvgPath
                           d={buildPathD(layer.data.points)}
@@ -560,30 +666,41 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
               )}
 
               {panelTab === "bg" && (
-                <View style={styles.bgRow}>
-                  {STRIP_BG_COLORS.map((color, i) => (
-                    <TouchableOpacity
-                      key={i}
-                      onPress={() => setBgIndex(i)}
-                      activeOpacity={0.8}
-                      style={[
-                        styles.bgSwatch,
-                        { backgroundColor: color },
-                        bgIndex === i && styles.bgSwatchActive,
-                      ]}
-                    >
-                      {bgIndex === i && (
-                        <Text
-                          style={[
-                            styles.bgCheck,
-                            { color: i === 1 ? "#fff" : "#333" },
-                          ]}
-                        >
-                          ✓
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  ))}
+                <View style={{ gap: 10 }}>
+                  <View style={styles.bgRow}>
+                    {STRIP_BG_COLORS.map((color, i) => (
+                      <TouchableOpacity
+                        key={i}
+                        onPress={() => setBgIndex(i)}
+                        activeOpacity={0.8}
+                        style={[
+                          styles.bgSwatch,
+                          { backgroundColor: color },
+                          bgIndex === i && styles.bgSwatchActive,
+                        ]}
+                      >
+                        {bgIndex === i && (
+                          <Text
+                            style={[
+                              styles.bgCheck,
+                              { color: i === 1 ? "#fff" : "#333" },
+                            ]}
+                          >
+                            ✓
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setShowDate((v) => !v)}
+                    style={[styles.ghostBtn, { alignSelf: "flex-start" }]}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.ghostBtnText}>
+                      {showDate ? "🗓 Hide date" : "🗓 Show date"}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               )}
 
@@ -603,13 +720,39 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
                       ))}
                     </View>
                   </ScrollView>
-                  <TouchableOpacity
-                    onPress={() => setLayers((prev) => prev.filter((l) => l.type !== "sticker"))}
-                    style={styles.ghostBtn}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.ghostBtnText}>Clear all</Text>
-                  </TouchableOpacity>
+                  <View style={styles.drawToolRow}>
+                    <TouchableOpacity
+                      onPress={() =>
+                        setLayers((prev) => {
+                          const idx = [...prev]
+                            .reverse()
+                            .findIndex((l) => l.type === "sticker");
+                          if (idx === -1) return prev;
+                          return prev.filter(
+                            (_, i) => i !== prev.length - 1 - idx,
+                          );
+                        })
+                      }
+                      style={styles.ghostBtn}
+                      activeOpacity={0.8}
+                      disabled={!layers.some((l) => l.type === "sticker")}
+                    >
+                      <Text style={styles.ghostBtnText}>↩ Undo</Text>
+                    </TouchableOpacity>
+                    <View style={{ flex: 1 }} />
+                    <TouchableOpacity
+                      onPress={() =>
+                        setLayers((prev) =>
+                          prev.filter((l) => l.type !== "sticker"),
+                        )
+                      }
+                      style={styles.ghostBtn}
+                      activeOpacity={0.8}
+                      disabled={!layers.some((l) => l.type === "sticker")}
+                    >
+                      <Text style={styles.ghostBtnText}>Clear all</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
 
@@ -671,9 +814,13 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
                     <TouchableOpacity
                       onPress={() =>
                         setLayers((prev) => {
-                          const idx = [...prev].reverse().findIndex((l) => l.type === "path");
+                          const idx = [...prev]
+                            .reverse()
+                            .findIndex((l) => l.type === "path");
                           if (idx === -1) return prev;
-                          return prev.filter((_, i) => i !== prev.length - 1 - idx);
+                          return prev.filter(
+                            (_, i) => i !== prev.length - 1 - idx,
+                          );
                         })
                       }
                       style={styles.ghostBtn}
@@ -683,7 +830,11 @@ export default function StripScreen({ photos, onRetake, onHome }: Props) {
                       <Text style={styles.ghostBtnText}>↩ Undo</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      onPress={() => setLayers((prev) => prev.filter((l) => l.type !== "path"))}
+                      onPress={() =>
+                        setLayers((prev) =>
+                          prev.filter((l) => l.type !== "path"),
+                        )
+                      }
                       style={[styles.ghostBtn, { marginLeft: 8 }]}
                       activeOpacity={0.8}
                       disabled={!layers.some((l) => l.type === "path")}
@@ -1116,5 +1267,53 @@ const styles = StyleSheet.create({
     width: 1,
     height: 20,
     backgroundColor: "rgba(0,0,0,0.1)",
+  },
+
+  // Text sticker
+  textStickerText: {
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    ...Platform.select({
+      web: { textShadow: "0px 1px 3px rgba(0,0,0,0.5)" },
+      default: {
+        textShadowColor: "rgba(0,0,0,0.5)",
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
+      },
+    }),
+  },
+  textStickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  textStickerInput: {
+    flex: 1,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.06)",
+    paddingHorizontal: 12,
+    fontSize: 14,
+    color: "#333",
+  },
+  textColorDots: {
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "center",
+  },
+  textStickerAddBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#E8325C",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  textStickerAddText: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "700",
+    lineHeight: 26,
   },
 });

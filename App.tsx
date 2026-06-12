@@ -9,11 +9,18 @@ export type Screen = "home" | "camera" | "strip";
 export default function App() {
   const [screen, setScreen] = useState<Screen>("home");
   const [photos, setPhotos] = useState<string[]>([]);
+  const [photoCount, setPhotoCount] = useState(4);
 
   return (
     <>
       <StatusBar style="dark" />
-      {screen === "home" && <HomeScreen onStart={() => setScreen("camera")} />}
+      {screen === "home" && (
+        <HomeScreen
+          onStart={() => setScreen("camera")}
+          photoCount={photoCount}
+          onPhotoCountChange={setPhotoCount}
+        />
+      )}
       {screen === "camera" && (
         <CameraScreen
           onDone={(uris) => {
@@ -21,6 +28,7 @@ export default function App() {
             setScreen("strip");
           }}
           onCancel={() => setScreen("home")}
+          totalPhotos={photoCount}
         />
       )}
       {screen === "strip" && (

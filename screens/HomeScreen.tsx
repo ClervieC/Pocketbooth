@@ -12,6 +12,8 @@ const { width, height } = Dimensions.get("window");
 
 interface Props {
   onStart: () => void;
+  photoCount: number;
+  onPhotoCountChange: (n: number) => void;
 }
 
 // 4 polaroid frames: each has a rotation, slight offset, and a tint color
@@ -22,7 +24,7 @@ const FRAMES = [
   { rotate: "14deg", tx: 62, ty: 16, bg: "#fccaca" },
 ];
 
-export default function HomeScreen({ onStart }: Props) {
+export default function HomeScreen({ onStart, photoCount, onPhotoCountChange }: Props) {
   return (
     <View style={styles.container}>
       {/* Pink blob accent in the background */}
@@ -59,7 +61,26 @@ export default function HomeScreen({ onStart }: Props) {
       </View>
 
       {/* Tagline */}
-      <Text style={styles.tagline}>4 shots. 1 strip.{"\n"}pure fun.</Text>
+      <Text style={styles.tagline}>{photoCount} shots. 1 strip.{"\n"}pure fun.</Text>
+
+      {/* Photo count selector */}
+      <View style={styles.countWrap}>
+        <View style={styles.countRow}>
+          {[2, 3, 4].map((n) => (
+            <TouchableOpacity
+              key={n}
+              style={[styles.countBtn, photoCount === n && styles.countBtnActive]}
+              onPress={() => onPhotoCountChange(n)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.countBtnText, photoCount === n && styles.countBtnTextActive]}>
+                {n}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={styles.countLabel}>shots per strip</Text>
+      </View>
 
       {/* CTA */}
       <TouchableOpacity
@@ -196,4 +217,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     marginTop: -8,
   },
+
+  countWrap: { alignItems: "center", gap: 6 },
+  countRow: { flexDirection: "row", gap: 10 },
+  countBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: "rgba(0,0,0,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  countBtnActive: { backgroundColor: "#E8325C", borderColor: "#E8325C" },
+  countBtnText: { fontSize: 18, fontWeight: "800", color: "#bbb" },
+  countBtnTextActive: { color: "#fff" },
+  countLabel: { fontSize: 11, color: "#bbb", letterSpacing: 0.3 },
 });

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
+  Image,
   Platform,
   StyleSheet,
   Text,
@@ -13,7 +14,7 @@ import {
 import Svg, { Path as SvgPath } from "react-native-svg";
 
 const { width } = Dimensions.get("window");
-const TOTAL_PHOTOS = 4;
+
 const COUNTDOWN_SECONDS = 3;
 const BETWEEN_DELAY_MS = 3000;
 
@@ -27,6 +28,7 @@ const BETWEEN_MESSAGES = [
 interface Props {
   onDone: (uris: string[]) => void;
   onCancel: () => void;
+  totalPhotos: number;
 }
 
 type Phase = "idle" | "countdown" | "flash" | "between" | "done";
@@ -72,11 +74,12 @@ function FlipCameraIcon({ size = 20, color = "#fff" }: { size?: number; color?: 
   );
 }
 
-export default function CameraScreen({ onDone, onCancel }: Props) {
+export default function CameraScreen({ onDone, onCancel, totalPhotos }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const [phase, setPhase] = useState<Phase>("idle");
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const [photosTaken, setPhotosTaken] = useState(0);
+  const [lastPhotoUri, setLastPhotoUri] = useState<string | null>(null);
   const photosRef = useRef<string[]>([]);
   const cameraRef = useRef<CameraView>(null);
   const flashOpacity = useRef(new Animated.Value(0)).current;
@@ -115,14 +118,17 @@ export default function CameraScreen({ onDone, onCancel }: Props) {
     }
     const result = await cameraRef.current.takePictureAsync({ quality: 0.9 });
     triggerFlash();
-    if (result) photosRef.current = [...photosRef.current, result.uri];
+    if (result) {
+      photosRef.current = [...photosRef.current, result.uri];
+      setLastPhotoUri(result.uri);
+    }
   };
 
   const startSequence = async () => {
     photosRef.current = [];
     setPhotosTaken(0);
 
-    for (let i = 0; i < TOTAL_PHOTOS; i++) {
+    for (let i = 0; i < totalPhotos; i++) {
       setPhase("countdown");
       for (let c = COUNTDOWN_SECONDS; c >= 1; c--) {
         setCountdown(c);
@@ -134,7 +140,7 @@ export default function CameraScreen({ onDone, onCancel }: Props) {
       await shoot();
       setPhotosTaken(i + 1);
 
-      if (i < TOTAL_PHOTOS - 1) {
+      if (i < totalPhotos - 1) {
         betweenProgress.setValue(1);
         Animated.timing(betweenProgress, {
           toValue: 0,
@@ -196,7 +202,7 @@ export default function CameraScreen({ onDone, onCancel }: Props) {
 
       {/* Dots — centered absolutely at the top */}
       <View style={styles.dotsRow} pointerEvents="none">
-        {Array.from({ length: TOTAL_PHOTOS }).map((_, i) => (
+        {Array.from({ length: totalPhotos }).map((_, i) => (
           <View
             key={i}
             style={[styles.dot, i < photosTaken && styles.dotFilled]}
@@ -217,7 +223,7 @@ export default function CameraScreen({ onDone, onCancel }: Props) {
             <Text style={styles.smileText}>
               {photosTaken === 0
                 ? "Smile! 😄"
-                : `Photo ${photosTaken + 1} of ${TOTAL_PHOTOS}`}
+                : `Photo ${photosTaken + 1} of ${totalPhotos}`}
             </Text>
             <Animated.Text
               style={[
@@ -235,8 +241,15 @@ export default function CameraScreen({ onDone, onCancel }: Props) {
       {phase === "between" && (
         <View style={StyleSheet.absoluteFill}>
           <View style={styles.countdownWrap}>
+            {lastPhotoUri && (
+              <Image
+                source={{ uri: lastPhotoUri }}
+                style={styles.betweenPreview}
+                resizeMode="cover"
+              />
+            )}
             <Text style={styles.betweenBadge}>
-              {photosTaken} / {TOTAL_PHOTOS}
+              {photosTaken} / {totalPhotos}
             </Text>
             <Text style={styles.betweenMsg}>
               {BETWEEN_MESSAGES[photosTaken - 1]}
@@ -270,7 +283,7 @@ export default function CameraScreen({ onDone, onCancel }: Props) {
       <View style={styles.bottomBar}>
         {phase === "idle" ? (
           <>
-            <Text style={styles.hint}>4 photos · 3 sec apart</Text>
+            <Text style={styles.hint}>{totalPhotos} photos · 3 sec apart</Text>
             <View style={styles.shootRow}>
               <View style={{ width: 44 }} />
               <TouchableOpacity
@@ -455,6 +468,14 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: 2,
     backgroundColor: "#fff",
+  },
+  betweenPreview: {
+    width: 90,
+    height: 120,
+    borderRadius: 8,
+    borderWidth: 3,
+    borderColor: "#fff",
+    marginBottom: 8,
   },
 
   // Bottom bar
